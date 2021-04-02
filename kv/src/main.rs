@@ -1,4 +1,3 @@
-use std::env;
 use std::process;
 use kv::KVStore;
 use kv::Operations;
@@ -57,7 +56,10 @@ fn main() {
         }
         println!("You typed: {}",value);
 
-        kv_store.insert(key,value);
+        kv_store.insert(key,value).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
         //fn insert<K, V>(self: &Self, key: K, value: V) -> std::io::Result<V>
 
     }

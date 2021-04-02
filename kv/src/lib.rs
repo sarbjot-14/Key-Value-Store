@@ -1,4 +1,7 @@
 use std::fmt::Debug;
+use std::fs::File;
+use std::fs;
+
 
 #[derive(Debug)]
 /// A struct that represents a key-value store.
@@ -72,6 +75,14 @@ impl Operations for KVStore {
         V: serde::Serialize + serde::de::DeserializeOwned + Default + Debug,
     {
         println!("{:?}, {:?}", key, value);
+        let serialized_value = serde_json::to_string(&value).unwrap();
+        let serialized_key = serde_json::to_string(&key).unwrap();
+        // is there better way to read and write to file?
+        // should be hashing then creating/overwriting correct file in sub files
+
+        fs::write("src/foo_value.txt", serialized_value).expect("Unable to write file");
+        fs::write("src/foo_key.txt", serialized_key).expect("Unable to write file");
+        
         Ok(value)
         
     }
@@ -79,8 +90,38 @@ impl Operations for KVStore {
 
 #[cfg(test)]
 mod tests {
+use std::process;
+use super::KVStore;
+use super::Operations;
+use std::fs;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn insert_string() {
+        let owned_string = "/random/path".to_string(); 
+        let kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+
+        // Review some books.
+        kv_store.insert(
+            "Adventures of Huckleberry Finn".to_string(),
+            "My favorite book.".to_string(),
+        ).unwrap();
+        // use lookup function eventually to see if it is correct instead of reading from file?
+        let value = fs::read_to_string("src/foo_value.txt")
+        .expect("Something went wrong reading the file");
+
+        let deserialized_value:String = serde_json::from_str(&value).unwrap();
+
+        assert_eq!(deserialized_value , "My favorite book.".to_string());  
+        // key
+        let key = fs::read_to_string("src/foo_key.txt")
+        .expect("Something went wrong reading the file");
+
+        let deserialized_key:String = serde_json::from_str(&key).unwrap();
+
+        assert_eq!(deserialized_key , "Adventures of Huckleberry Finn".to_string());  
     }
 }
