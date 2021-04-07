@@ -55,6 +55,23 @@ pub trait Operations {
         K: serde::Serialize + Default + Debug,
         V: serde::Serialize + serde::de::DeserializeOwned + Default + Debug;
 
+    /// A function that returns a previously-inserted value.
+    ///
+    /// If there **is** a key-value mapping stored already with the same key, it should return
+    /// the value.
+    ///
+    /// If there is **no** key-value mapping stored already with the same key, it should return
+    /// an [std::io::Error].
+    ///
+    /// Make sure you understand what the trait bounds mean for K and V.
+    ///
+    /// Refer to [https://docs.serde.rs/serde/](https://docs.serde.rs/serde/)
+    /// and [https://serde.rs](https://serde.rs) for serde.
+    fn lookup<K, V>(self: &Self, key: K) -> std::io::Result<V>
+    where
+        K: serde::Serialize + Default + Debug,
+        V: serde::de::DeserializeOwned + Default + Debug;
+
   
 }
 
@@ -85,6 +102,18 @@ impl Operations for KVStore {
         
         Ok(value)
         
+    }
+
+    fn lookup<K, V>(self: &Self, key: K) -> std::io::Result<V>
+    where
+        K: serde::Serialize + Default + Debug,
+        V: serde::de::DeserializeOwned + Default + Debug
+    {
+        
+        let value = fs::read_to_string("src/foo_value.txt")
+        .expect("Something went wrong reading the file");
+
+        Ok(serde_json::from_str(&value).unwrap())
     }
 }
 
@@ -123,5 +152,28 @@ use std::fs;
         let deserialized_key:String = serde_json::from_str(&key).unwrap();
 
         assert_eq!(deserialized_key , "Adventures of Huckleberry Finn".to_string());  
+    }
+
+    fn print_type_of<T>(_: &T) {
+        
+        if std::any::type_name::<T>() == "i32"{
+            println!("it is {}", std::any::type_name::<T>());
+
+        }
+    }
+
+    #[test]
+    fn insert_i32() {
+        let owned_string = "/random/path".to_string(); 
+        let kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        kv_store.insert(String::from("key"), 1 as i32).unwrap();
+    
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 1 as i32);  
+
+       
     }
 }
