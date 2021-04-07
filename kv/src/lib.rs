@@ -49,11 +49,12 @@ pub trait Operations {
     /// Make sure you understand what the trait bounds mean for K and V.
     ///
     /// Refer to [https://docs.serde.rs/serde/](https://docs.serde.rs/serde/)
-    /// and [https://serde.rs](https://serde.rs) for serde.
-    fn insert<K, V>(self: &Self, key: K, value: V) -> std::io::Result<V>
-    where
-        K: serde::Serialize + Default + Debug,
-        V: serde::Serialize + serde::de::DeserializeOwned + Default + Debug;
+    /// and [https://serde.rs](https://serde.rs) for serde.    
+    fn insert<K, V>(self: &mut Self, key: K, value: V) -> std::io::Result<()>
+        where
+            K: serde::Serialize + Default + Debug,
+            V: serde::Serialize + Default + Debug;
+    
 
     /// A function that returns a previously-inserted value.
     ///
@@ -86,10 +87,10 @@ impl Operations for KVStore {
     fn size(&self) -> usize {
         0
     }
-    fn insert<K, V>(self: &Self, key: K, value: V) -> std::io::Result<V>
-    where
-        K: serde::Serialize + Default + Debug,
-        V: serde::Serialize + serde::de::DeserializeOwned + Default + Debug,
+    fn insert<K, V>(self: &mut Self, key: K, value: V) -> std::io::Result<()>
+        where
+            K: serde::Serialize + Default + Debug,
+            V: serde::Serialize + Default + Debug
     {
         println!("{:?}, {:?}", key, value);
         let serialized_value = serde_json::to_string(&value).unwrap();
@@ -100,7 +101,7 @@ impl Operations for KVStore {
         fs::write("src/foo_value.txt", serialized_value).expect("Unable to write file");
         fs::write("src/foo_key.txt", serialized_key).expect("Unable to write file");
         
-        Ok(value)
+        Ok(())
         
     }
 
@@ -127,7 +128,7 @@ use std::fs;
     #[test]
     fn insert_string() {
         let owned_string = "/random/path".to_string(); 
-        let kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             eprintln!("Problem : {}", err);
             process::exit(1);
         });

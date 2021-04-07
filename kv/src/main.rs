@@ -7,7 +7,7 @@ fn main() {
     println!("Hello, world!");
 
     let owned_string = "/random/path".to_string(); 
-    let kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+    let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
         eprintln!("Problem : {}", err);
         process::exit(1);
     });
