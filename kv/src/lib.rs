@@ -99,7 +99,7 @@ impl Operations for KVStore {
     {
         let mut hasher = Sha256::new();
 
-        println!("{:?}, {:?}", key, value);
+        //println!("{:?}, {:?}", key, value);
         let serialized_value = serde_json::to_string(&value).unwrap();
         let serialized_key = serde_json::to_string(&key).unwrap();
         // is there better way to read and write to file?
@@ -108,7 +108,7 @@ impl Operations for KVStore {
         hasher.input_str(&serialized_key);
         let sha_key = hasher.result_str();
 
-        let str_path = "src/";
+        let str_path = &self.path;
         let key_format = ".key";
         let value_format = ".value";
 
@@ -126,9 +126,23 @@ impl Operations for KVStore {
         K: serde::Serialize + Default + Debug,
         V: serde::de::DeserializeOwned + Default + Debug
     {
+
+        let mut hasher = Sha256::new();
+
+        let serialized_key = serde_json::to_string(&key).unwrap();
+
+        hasher.input_str(&serialized_key);
+        let sha_key = hasher.result_str();
+
+        let str_path = &self.path;
+        let value_format = ".value";
+
+        let value_file = format!("{}{}{}", str_path, sha_key, value_format);
         
-        let value = fs::read_to_string("src/foo_value.txt")
+        let value = fs::read_to_string(value_file)
         .expect("Something went wrong reading the file");
+
+        println!("it is {}", value);
 
         Ok(serde_json::from_str(&value).unwrap())
     }
@@ -143,9 +157,9 @@ use std::fs;
 
     #[test]
     fn insert_string() {
-        let owned_string = "/random/path".to_string(); 
+        let owned_string = "./".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+            //eprintln!("Problem : {}", err);
             process::exit(1);
         });
 
@@ -174,23 +188,23 @@ use std::fs;
     fn print_type_of<T>(_: &T) {
         
         if std::any::type_name::<T>() == "i32"{
-            println!("it is {}", std::any::type_name::<T>());
+            //println!("it is {}", std::any::type_name::<T>());
 
         }
     }
 
-/*    #[test]
+    #[test]
     fn insert_i32() {
-        let owned_string = "/random/path".to_string(); 
-        let kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let owned_string = "./".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
             process::exit(1);
         });
 
-        kv_store.insert(String::from("key"), 1 as i32).unwrap();
+        kv_store.insert(String::from("key"), 2 as i32).unwrap();
     
-        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 1 as i32);  
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
 
        
-    }*/
+    }
 }
