@@ -117,8 +117,16 @@ impl Operations for KVStore {
         let key_file = format!("{}{}{}", str_path, sha_key, key_format);
         let value_file = format!("{}{}{}", str_path, sha_key, value_format);
 
-        fs::write(key_file, serialized_key).expect("Unable to write file");
-        fs::write(value_file, serialized_value).expect("Unable to write file");
+        
+        match fs::write(key_file, serialized_key) {
+            Err(e) => return Err(e),
+            _ => (),
+        }
+
+        match fs::write(value_file, serialized_value) {
+            Err(e) => return Err(e),
+            _ => (),
+        }
         
         Ok(())
     }
@@ -218,7 +226,7 @@ use std::fs;
     }
 
     #[test]
-    fn invalid_path() {
+    fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
@@ -231,8 +239,20 @@ use std::fs;
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
         }
-    
-        //assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
-       
+           
+    }
+    #[test]
+    fn invalid_path_insert() {
+        let owned_string = "./invalidfolder".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        match  kv_store.insert(String::from("key"), 2 as i32) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+           
     }
 }
