@@ -3,6 +3,8 @@ extern crate crypto;
 use std::fmt::Debug;
 use std::fs::File;
 use std::fs;
+use std::io;
+use std::io::Read;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
@@ -138,13 +140,21 @@ impl Operations for KVStore {
         let value_format = ".value";
 
         let value_file = format!("{}{}{}", str_path, sha_key, value_format);
-        
-        let value = fs::read_to_string(value_file)
-        .expect("Something went wrong reading the file");
 
-        println!("it is {}", value);
+        let f = File::open(value_file);
 
-        Ok(serde_json::from_str(&value).unwrap())
+        let mut f = match f {
+            Ok(file) => file,
+            Err(e) => return Err(e),
+        };
+
+        let mut s = String::new();
+
+        match f.read_to_string(&mut s) {
+            Ok(_) => return Ok(serde_json::from_str(&s).unwrap()),
+            Err(e) => return Err(e),
+        }
+
     }
 }
 
@@ -204,7 +214,25 @@ use std::fs;
         kv_store.insert(String::from("key"), 2 as i32).unwrap();
     
         assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
+       
+    }
 
+    #[test]
+    fn invalid_path() {
+        let owned_string = "./invalidfolder".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        kv_store.insert(String::from("key"), 2 as i32).expect("Insert Failed");
+
+        match  kv_store.lookup::<String, i32>(String::from("key")) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+    
+        //assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
        
     }
 }
