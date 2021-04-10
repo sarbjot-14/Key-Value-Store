@@ -233,9 +233,14 @@ use std::fs;
             process::exit(1);
         });
 
-        let test_obj = struct test {
-            Key: K,
-            Value: V
+        struct Test {
+            key: K,
+            value: V
+        }
+
+        let test_obj = Test {
+            key: String::from("the key"),
+            value: String::from("the value"),
         };
 
         kv_store.insert(String::from(test_obj.key), 2 as i32).unwrap();
