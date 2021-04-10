@@ -56,12 +56,12 @@ pub trait Operations {
     /// Make sure you understand what the trait bounds mean for K and V.
     ///
     /// Refer to [https://docs.serde.rs/serde/](https://docs.serde.rs/serde/)
-    /// and [https://serde.rs](https://serde.rs) for serde.    
+    /// and [https://serde.rs](https://serde.rs) for serde.
     fn insert<K, V>(self: &mut Self, key: K, value: V) -> std::io::Result<()>
         where
             K: serde::Serialize + Default + Debug,
             V: serde::Serialize + Default + Debug;
-    
+
 
     /// A function that returns a previously-inserted value.
     ///
@@ -80,7 +80,7 @@ pub trait Operations {
         K: serde::Serialize + Default + Debug,
         V: serde::de::DeserializeOwned + Default + Debug;
 
-  
+
 }
 
 impl Operations for KVStore {
@@ -102,12 +102,12 @@ impl Operations for KVStore {
         let mut hasher = Sha256::new();
 
         //println!("{:?}, {:?}", key, value);
-        let serialized_value = serde_json::to_string(&value).unwrap();
+        let serialized_value = serde_json::to_string(&value).unwrap(); //might cause error
         let serialized_key = serde_json::to_string(&key).unwrap();
         // is there better way to read and write to file?
         // should be hashing then creating/overwriting correct file in sub files
 
-        hasher.input_str(&serialized_key);
+        hasher.input_str(&serialized_key); // might cause error here
         let sha_key = hasher.result_str();
 
         let str_path = &self.path;
@@ -117,7 +117,7 @@ impl Operations for KVStore {
         let key_file = format!("{}{}{}", str_path, sha_key, key_format);
         let value_file = format!("{}{}{}", str_path, sha_key, value_format);
 
-        
+
         match fs::write(key_file, serialized_key) {
             Err(e) => return Err(e),
             _ => (),
@@ -127,7 +127,7 @@ impl Operations for KVStore {
             Err(e) => return Err(e),
             _ => (),
         }
-        
+
         Ok(())
     }
 
@@ -175,7 +175,7 @@ use std::fs;
 
     #[test]
     fn insert_string() {
-        let owned_string = "./".to_string(); 
+        let owned_string = "./".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -193,18 +193,18 @@ use std::fs;
 
         let deserialized_value:String = serde_json::from_str(&value).unwrap();
 
-        assert_eq!(deserialized_value , "My favorite book.".to_string());  
+        assert_eq!(deserialized_value , "My favorite book.".to_string());
         // key
         let key = fs::read_to_string("src/foo_key.txt")
         .expect("Something went wrong reading the file");
 
         let deserialized_key:String = serde_json::from_str(&key).unwrap();
 
-        assert_eq!(deserialized_key , "Adventures of Huckleberry Finn".to_string());  
+        assert_eq!(deserialized_key , "Adventures of Huckleberry Finn".to_string());
     }
 
     fn print_type_of<T>(_: &T) {
-        
+
         if std::any::type_name::<T>() == "i32"{
             //println!("it is {}", std::any::type_name::<T>());
 
@@ -213,21 +213,40 @@ use std::fs;
 
     #[test]
     fn insert_i32() {
-        let owned_string = "./".to_string(); 
+        let owned_string = "./".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
         });
 
         kv_store.insert(String::from("key"), 2 as i32).unwrap();
-    
-        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
-       
+
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);
+
+    }
+
+    #[test]
+    fn insert_object() {
+        let owned_string = "./".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        let test_obj = struct test {
+            Key: K,
+            Value: V
+        };
+
+        kv_store.insert(String::from(test_obj.key), 2 as i32).unwrap();
+
+        assert_eq!( kv_store.lookup::<String, i32>(String::from(test_obj.key)).unwrap(), 2 as i32);
+
     }
 
     #[test]
     fn invalid_path_lookup() {
-        let owned_string = "./invalidfolder".to_string(); 
+        let owned_string = "./invalidfolder".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -239,11 +258,11 @@ use std::fs;
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
         }
-           
+
     }
     #[test]
     fn invalid_path_insert() {
-        let owned_string = "./invalidfolder".to_string(); 
+        let owned_string = "./invalidfolder".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -253,6 +272,6 @@ use std::fs;
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
         }
-           
+
     }
 }
