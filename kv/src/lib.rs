@@ -8,7 +8,7 @@ use std::io::Read;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-
+use std::collections::HashMap;
 
 #[derive(Debug)]
 /// A struct that represents a key-value store.
@@ -79,7 +79,6 @@ pub trait Operations {
     where
         K: serde::Serialize + Default + Debug,
         V: serde::de::DeserializeOwned + Default + Debug;
-
 
 }
 
@@ -245,7 +244,7 @@ use serde::{Deserialize, Serialize};
             //let j = serde_json::to_string(&address).unwrap();
 
 
-            let owned_string = "./".to_string();
+            let owned_string = "./test".to_string();
             let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
                 //eprintln!("Problem : {}", err);
                 process::exit(1);
@@ -298,7 +297,7 @@ use serde::{Deserialize, Serialize};
 
     #[test]
     fn insert_bool() {
-        let owned_string = "./".to_string();
+        let owned_string = "./tests".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -318,7 +317,7 @@ use serde::{Deserialize, Serialize};
 
     #[test]
     fn insert_array() {
-        let owned_string = "./".to_string();
+        let owned_string = "./t".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
             process::exit(1)
         });
@@ -330,12 +329,27 @@ use serde::{Deserialize, Serialize};
 
         assert_eq!(kv_store.lookup::<String, Vec<i32>>(String::from("key")).unwrap(), [1, 2, 3]);
     }
-/*
+
     #[test]
     fn insert_hashmap() {
+        let owned_string = "./te".to_string();
+        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
+            process::exit(1)
+        });
+
+        let mut scores = HashMap::new();
+
+        scores.insert(String::from("Blue"), 10);
+        scores.insert(String::from("Yellow"), 50);
+
+        kv_store.insert(String::from("key"), scores as HashMap).unwrap();
+
+        let score_test::HashMap = kv_store.lookup::<String, HashMap>(String::from("key")).unwrap();
+
+        assert_eq!( score_test.("Blue"), 10);
 
     }
-*/
+
     #[test]
     fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string();
@@ -344,7 +358,7 @@ use serde::{Deserialize, Serialize};
             process::exit(1);
         });
 
-        kv_store.insert(String::from("key"), 2 as i32).expect("Insert Failed");
+        kv_store.insert(String::from("key"), 3 as i32).expect("Insert Failed");
 
         match  kv_store.lookup::<String, i32>(String::from("key")) {
             Ok(_) => assert_eq!(false, false),
@@ -360,7 +374,7 @@ use serde::{Deserialize, Serialize};
             process::exit(1);
         });
 
-        match  kv_store.insert(String::from("key"), 2 as i32) {
+        match  kv_store.insert(String::from("key"), 3 as i32) {
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
         }
