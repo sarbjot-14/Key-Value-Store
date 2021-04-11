@@ -253,7 +253,11 @@ use serde::{Deserialize, Serialize};
 
             kv_store.insert(String::from("key"), address as Address).unwrap();
 
-            //assert_eq!( kv_store.lookup::<String, Address>(String::from("key")).unwrap(), 2 as i32);
+            let an_add:Address = kv_store.lookup::<String, Address>(String::from("key")).unwrap();
+
+            assert_eq!( an_add.street, "10 Downing Street".to_owned());
+            assert_eq!( an_add.city, "London".to_owned());
+            // assert_eq!( kv_store.lookup::<String, Address>(String::from("key")).unwrap(), String::from("London") as String);
 
         }
 
@@ -291,41 +295,36 @@ use serde::{Deserialize, Serialize};
 
     }
 */
-/*
+
     #[test]
-    fn insert_bool_true() {
+    fn insert_bool() {
         let owned_string = "./".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
         });
 
-        let a_bool:bool = true;
-        kv_store.insert(String::from("key"), a_bool as bool).unwrap();
+        let t_bool:bool = true;
+        kv_store.insert(String::from("key"), t_bool as bool).unwrap();
 
         assert_eq!( kv_store.lookup::<String, bool>(String::from("key")).unwrap(), true);
 
-    }
-
-    #[test]
-    fn insert_bool_false() {
-        let owned_string = "./".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
-            process::exit(1);
-        });
-
-        let a_bool:bool = false;
-        kv_store.insert(String::from("key"), a_bool as bool).unwrap();
+        let f_bool:bool = false;
+        kv_store.insert(String::from("key"), f_bool as bool).unwrap();
 
         assert_eq!( kv_store.lookup::<String, bool>(String::from("key")).unwrap(), false);
 
     }
 
+/*
     #[test]
     fn inser_array() {
         let owned_string = "./".to_string();
-        let
+        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
+            process::exit(1)
+        });
+
+        let test_arr = [];
     }
 */
     #[test]
