@@ -172,6 +172,7 @@ use std::process;
 use super::KVStore;
 use super::Operations;
 use std::fs;
+use serde::{Deserialize, Serialize};
 
     #[test]
     fn insert_string() {
@@ -225,6 +226,38 @@ use std::fs;
 
     }
 
+    //Default
+        #[derive(Serialize, Deserialize,Default,Debug)]
+        struct Address {
+            street: String,
+            city: String,
+        }
+
+        #[test]
+        fn insert_obj() {
+
+            let address = Address {
+                street: "10 Downing Street".to_owned(),
+                city: "London".to_owned(),
+            };
+
+            // Serialize it to a JSON string.
+            //let j = serde_json::to_string(&address).unwrap();
+
+
+            let owned_string = "./".to_string();
+            let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+                //eprintln!("Problem : {}", err);
+                process::exit(1);
+            });
+
+            kv_store.insert(String::from("key"), address as Address).unwrap();
+
+            //assert_eq!( kv_store.lookup::<String, Address>(String::from("key")).unwrap(), 2 as i32);
+
+        }
+
+/*
     #[test]
     fn insert_object() {
         let owned_string = "./".to_string();
@@ -233,22 +266,32 @@ use std::fs;
             process::exit(1);
         });
 
+        // #[derive(Debug, Serialize, Deserialize)]
         struct Test {
-            key: K,
-            value: V,
+            test_id: usize,
+            test_input: String,
+        }
+
+        impl<T> Default for Test {
+            fn default() -> Self {
+                Self { field: Default::default() }
+            }
         }
 
         let test_obj = Test {
-            key: String::from("the key"),
-            value: String::from("the value"),
+            test_id: 84,
+            test_input: String::from("the value"),
         };
 
-        kv_store.insert(String::from(test_obj.key), test_obj.value as Test).unwrap();
+        kv_store.insert(String::from("key"), test_obj as Test).unwrap();
 
-        assert_eq!( kv_store.lookup::<String, i32>(String::from(test_obj.key)).unwrap(), 2 as i32);
+        let test_var:Test = kv_store.lookup::<String, Test>(String::from("key")).unwrap();
+        assert_eq!( test_var.test_id, 84 as usize);
+        assert_eq!( test_var.test_input, String::from("the value"));
 
     }
-
+*/
+/*
     #[test]
     fn insert_bool_true() {
         let owned_string = "./".to_string();
@@ -260,7 +303,7 @@ use std::fs;
         let a_bool:bool = true;
         kv_store.insert(String::from("key"), a_bool as bool).unwrap();
 
-        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);
+        assert_eq!( kv_store.lookup::<String, bool>(String::from("key")).unwrap(), true);
 
     }
 
@@ -275,10 +318,16 @@ use std::fs;
         let a_bool:bool = false;
         kv_store.insert(String::from("key"), a_bool as bool).unwrap();
 
-        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);
+        assert_eq!( kv_store.lookup::<String, bool>(String::from("key")).unwrap(), false);
 
     }
 
+    #[test]
+    fn inser_array() {
+        let owned_string = "./".to_string();
+        let
+    }
+*/
     #[test]
     fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string();
