@@ -316,17 +316,21 @@ use serde::{Deserialize, Serialize};
 
     }
 
-/*
     #[test]
-    fn inser_array() {
+    fn insert_array() {
         let owned_string = "./".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
             process::exit(1)
         });
 
-        let test_arr = [];
+        let v: Vec<i32> = Vec::new();
+        let v = vec![1, 2, 3];
+
+        kv_store.insert(String::from("key"), v as Vec<i32>).unwrap();
+
+        assert_eq!(kv_store.lookup::<String, Vec<i32>>(String::from("key")).unwrap(), [1, 2, 3]);
     }
-*/
+
     #[test]
     fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string();
