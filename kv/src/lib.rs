@@ -330,7 +330,12 @@ use serde::{Deserialize, Serialize};
 
         assert_eq!(kv_store.lookup::<String, Vec<i32>>(String::from("key")).unwrap(), [1, 2, 3]);
     }
+/*
+    #[test]
+    fn insert_hashmap() {
 
+    }
+*/
     #[test]
     fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string();
