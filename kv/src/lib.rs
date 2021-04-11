@@ -235,7 +235,7 @@ use std::fs;
 
         struct Test {
             key: K,
-            value: V
+            value: V,
         }
 
         let test_obj = Test {
@@ -243,9 +243,39 @@ use std::fs;
             value: String::from("the value"),
         };
 
-        kv_store.insert(String::from(test_obj.key), 2 as i32).unwrap();
+        kv_store.insert(String::from(test_obj.key), test_obj.value as Test).unwrap();
 
         assert_eq!( kv_store.lookup::<String, i32>(String::from(test_obj.key)).unwrap(), 2 as i32);
+
+    }
+
+    #[test]
+    fn insert_bool_true() {
+        let owned_string = "./".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        let a_bool:bool = true;
+        kv_store.insert(String::from("key"), a_bool as bool).unwrap();
+
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);
+
+    }
+
+    #[test]
+    fn insert_bool_false() {
+        let owned_string = "./".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        let a_bool:bool = false;
+        kv_store.insert(String::from("key"), a_bool as bool).unwrap();
+
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);
 
     }
 
