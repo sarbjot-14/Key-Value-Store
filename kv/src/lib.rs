@@ -275,7 +275,7 @@ use std::fs;
         //kv_store.insert(String::from("Test String 1 - Key"), 2 as i32).unwrap();
         //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
     }
-/*
+
     #[test]
     fn invalid_path_lookup() {
         let owned_string = "./invalidfolder".to_string(); 
@@ -374,5 +374,5 @@ use std::fs;
         assert_eq!( kv_store.lookup::<String, i32>(String::from("key")).unwrap(), 2 as i32);  
 
        
-    }*/
+    }
 }
