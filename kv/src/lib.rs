@@ -8,7 +8,6 @@ use std::io::Read;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 /// A struct that represents a key-value store.
@@ -172,6 +171,7 @@ use super::KVStore;
 use super::Operations;
 use std::fs;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
     #[test]
     fn insert_string() {
@@ -337,16 +337,16 @@ use serde::{Deserialize, Serialize};
             process::exit(1)
         });
 
-        let mut scores = HashMap::new();
+        let mut scores: HashMap<String, isize> = HashMap::new();
 
         scores.insert(String::from("Blue"), 10);
         scores.insert(String::from("Yellow"), 50);
 
-        kv_store.insert(String::from("key"), scores as HashMap).unwrap();
+        kv_store.insert(String::from("key"), scores as HashMap<String, isize>).unwrap();
 
-        let score_test::HashMap = kv_store.lookup::<String, HashMap>(String::from("key")).unwrap();
+        let score_test:HashMap<String, isize> = kv_store.lookup::<String, HashMap<String, isize>>(String::from("key")).unwrap();
 
-        assert_eq!( score_test.("Blue"), 10);
+        assert_eq!( score_test["Blue"], 10);
 
     }
 
