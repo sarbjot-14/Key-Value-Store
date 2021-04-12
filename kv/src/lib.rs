@@ -279,36 +279,7 @@ use std::collections::HashMap;
         //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
     }
 
-    #[test]
-    fn invalid_path_lookup() {
-        let owned_string = "./invalidfolder".to_string(); 
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
-            process::exit(1);
-        });
-
-        kv_store.insert(String::from("key"), 2 as i32).expect("Insert Failed");
-
-        match  kv_store.lookup::<String, i32>(String::from("key")) {
-            Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
-        }
-           
-    }
-    #[test]
-    fn invalid_path_insert() {
-        let owned_string = "./invalidfolder".to_string(); 
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
-            process::exit(1);
-        });
-
-        match  kv_store.insert(String::from("key"), 2 as i32) {
-            Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
-        }
-           
-    }
+  
 
     #[test]
     fn inserting_already_existing_key() {
