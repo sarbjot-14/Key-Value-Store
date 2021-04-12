@@ -1,11 +1,10 @@
 extern crate crypto;
 
 use std::fmt::Debug;
-use std::fs::File;
 use std::fs;
-use std::io;
-use std::io::Read;
 
+use std::io::{Error, ErrorKind};
+use std::path::Path;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
 
@@ -42,12 +41,11 @@ pub trait Operations {
 
     /// A function that inserts a new key-value mapping.
     ///
-    /// If there is **no** key-value mapping stored already with the same key, it should return a
-    /// Result that contains the value being asked to be inserted.
+    /// If there is **no** key-value mapping stored already with the same key, it should return
+    /// `Ok(())` if storing is successfully done.
     ///
-    /// If there **is** a key-value mapping stored already with the same key, it should first read
-    /// the existing value, overwrite the existing value with the new value, and return a Result
-    /// that contains the **existing** value.
+    /// If there **is** a key-value mapping stored already with the same key, it should return an
+    /// [std::io::Error].
     ///
     /// Make sure you read and understand the assignment document regarding how to store key-value
     /// mappings using files as well as how to structure sub-directories.
@@ -57,10 +55,9 @@ pub trait Operations {
     /// Refer to [https://docs.serde.rs/serde/](https://docs.serde.rs/serde/)
     /// and [https://serde.rs](https://serde.rs) for serde.
     fn insert<K, V>(self: &mut Self, key: K, value: V) -> std::io::Result<()>
-        where
-            K: serde::Serialize + Default + Debug,
-            V: serde::Serialize + Default + Debug;
-
+    where
+        K: serde::Serialize + Default + Debug,
+        V: serde::Serialize + Default + Debug;
 
     /// A function that returns a previously-inserted value.
     ///
@@ -79,9 +76,30 @@ pub trait Operations {
         K: serde::Serialize + Default + Debug,
         V: serde::de::DeserializeOwned + Default + Debug;
 
+
+    /// A function that removes a previously-inserted key-value mapping.
+    ///
+    /// If there **is** a key-value mapping stored already with the same key, it should return
+    /// the value and delete the key-value mapping from the file system.
+    ///
+    /// If there is **no** key-value mapping stored already with the same key, it should
+    /// return an [std::io::Error].
+    ///
+    /// If a sub-directory does not contain any key-value files, this should delete the
+    /// sub-directory as well.
+    ///
+    /// Make sure you understand what the trait bounds mean for K and V.
+    ///
+    /// Refer to [https://docs.serde.rs/serde/](https://docs.serde.rs/serde/)
+    /// and [https://serde.rs](https://serde.rs) for serde.
+    fn remove<K, V>(self: &mut Self, key: K) -> std::io::Result<V>
+    where
+        K: serde::Serialize + Default + Debug,
+        V: serde::de::DeserializeOwned + Default + Debug;
 }
 
 impl Operations for KVStore {
+
     fn new(path: &str) -> std::io::Result<KVStore> {
         Ok(KVStore {
             size: 0,
@@ -90,8 +108,9 @@ impl Operations for KVStore {
     }
 
     fn size(&self) -> usize {
-        0
+        self.size
     }
+
     fn insert<K, V>(self: &mut Self, key: K, value: V) -> std::io::Result<()>
         where
             K: serde::Serialize + Default + Debug,
@@ -102,30 +121,36 @@ impl Operations for KVStore {
         //println!("{:?}, {:?}", key, value);
         let serialized_value = serde_json::to_string(&value).unwrap(); //might cause error
         let serialized_key = serde_json::to_string(&key).unwrap();
-        // is there better way to read and write to file?
-        // should be hashing then creating/overwriting correct file in sub files
 
         hasher.input_str(&serialized_key); // might cause error here
         let sha_key = hasher.result_str();
 
-        let str_path = &self.path;
+        let sha_key_slice = &sha_key[0..10];
+
+        let curr_path = &self.path;
         let key_format = ".key";
         let value_format = ".value";
 
-        let key_file = format!("{}{}{}", str_path, sha_key, key_format);
-        let value_file = format!("{}{}{}", str_path, sha_key, value_format);
+        let sub_dir_path = format!("{}/{}", curr_path, sha_key_slice);
+        fs::create_dir_all(&sub_dir_path).expect("Something went wrong creating the sub directory!");
+        let key_file = format!("{}/{}{}", sub_dir_path, sha_key, key_format);
+        let value_file = format!("{}/{}{}", sub_dir_path, sha_key, value_format);
+        let key_file_path = Path::new(&key_file);
+        let value_file_path = Path::new(&value_file);
 
 
-        match fs::write(key_file, serialized_key) {
-            Err(e) => return Err(e),
-            _ => (),
+        if key_file_path.is_file() {
+            Error::new(ErrorKind::Other, "Key file already exists!");
+        }
+        if value_file_path.is_file() {
+            Error::new(ErrorKind::Other, "Value file already exists!");
         }
 
-        match fs::write(value_file, serialized_value) {
-            Err(e) => return Err(e),
-            _ => (),
-        }
 
+        fs::write(key_file, serialized_key).expect("Something went wrong writing to the key file!");
+        fs::write(value_file, serialized_value).expect("Something went wronng writing to the value file!");
+        self.size = self.size + 1;
+        
         Ok(())
     }
 
@@ -141,26 +166,75 @@ impl Operations for KVStore {
 
         hasher.input_str(&serialized_key);
         let sha_key = hasher.result_str();
+        let sha_key_slice = &sha_key[0..10];
 
-        let str_path = &self.path;
+        let curr_path = &self.path;
         let value_format = ".value";
 
-        let value_file = format!("{}{}{}", str_path, sha_key, value_format);
+        let sub_dir = format!("{}/{}", curr_path, sha_key_slice);
+        fs::create_dir_all(&sub_dir).expect("Something went wrong creating the sub directory!");
 
-        let f = File::open(value_file);
+        let value_file = format!("{}/{}{}", sub_dir, sha_key, value_format);
+        let value_file_path = Path::new(&value_file);
 
-        let mut f = match f {
-            Ok(file) => file,
-            Err(e) => return Err(e),
-        };
+        if !(value_file_path.is_file()) {
+            Error::new(ErrorKind::Other, "Value file does not exist!");
+        }
+        
+        let value = fs::read_to_string(value_file)
+        .expect("Something went wrong reading the value file!");
 
-        let mut s = String::new();
+        println!("it is {}", value);
 
-        match f.read_to_string(&mut s) {
-            Ok(_) => return Ok(serde_json::from_str(&s).unwrap()),
-            Err(e) => return Err(e),
+        Ok(serde_json::from_str(&value).unwrap())
+    }
+
+    fn remove<K, V>(self: &mut Self, key: K) -> std::io::Result<V>
+    where
+        K: serde::Serialize + Default + Debug,
+        V: serde::de::DeserializeOwned + Default + Debug
+    {
+        let mut hasher = Sha256::new();
+        let serialized_key = serde_json::to_string(&key).unwrap();
+        hasher.input_str(&serialized_key);
+
+        let sha_key = hasher.result_str();
+        let sha_key_slice = &sha_key[0..10];
+
+        let curr_path = &self.path;
+        let key_format = ".key";
+        let value_format = ".value";
+
+        let sub_dir = format!("{}/{}", curr_path, sha_key_slice);
+        let key_file = format!("{}/{}{}", sub_dir, sha_key, key_format);
+        let value_file = format!("{}/{}{}", sub_dir, sha_key, value_format);
+
+        let sub_dir_path = Path::new(&sub_dir);
+        let key_file_path = Path::new(&key_file);
+        let value_file_path = Path::new(&value_file);
+
+        if !(sub_dir_path.is_dir()) {
+            Error::new(ErrorKind::Other, "Sub directory does not exist!");
+        }
+        if !(key_file_path.is_file()) {
+            Error::new(ErrorKind::Other, "Key file does not exist!");
+        }
+        if !(value_file_path.is_file()) {
+            Error::new(ErrorKind::Other, "Value file does not exist!");
         }
 
+        let value = fs::read_to_string(value_file_path)
+        .expect("Something went wrong reading the value file!");
+
+        fs::remove_file(&key_file).expect("Something went wrong removing the key file!");
+        fs::remove_file(&value_file).expect("Something went wrong removing the value file!");
+        self.size = self.size - 1;
+
+        if sub_dir_path.read_dir()?.next().is_none() {
+            fs::remove_dir_all(&sub_dir_path).expect("Something went wrong removing the sub directory!");
+        }
+
+        Ok(serde_json::from_str(&value).unwrap())
     }
 }
 
@@ -174,8 +248,87 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
     #[test]
+    fn insert_i32_1() {
+        let owned_string = ".".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Test String 1 - Key"), 1 as i32).unwrap();
+        kv_store.insert(String::from("Test String 2 - Key"), 2 as i32).unwrap();
+        kv_store.insert(String::from("Test String 3 - Key"), 3 as i32).unwrap();
+        println!("size : {}", kv_store.size());
+        assert_eq!( kv_store.size(), 3);
+        //kv_store.insert(String::from("Test String 1 - Key"), 2 as i32).unwrap();
+        //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
+    }
+
+    #[test]
+    fn insert_i32_101() {
+        let owned_string = ".".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        println!("size : {}", kv_store.size());
+        //assert_eq!( kv_store.size(), 0);
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 1 as i32);
+        assert_eq!( kv_store.size(), 0);
+        //kv_store.insert(String::from("Test String 1 - Key"), 2 as i32).unwrap();
+        //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
+    }
+
+    #[test]
+    fn invalid_path_lookup() {
+        let owned_string = "./invalidfolder".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        kv_store.insert(String::from("key"), 2 as i32).expect("Insert Failed");
+
+        match  kv_store.lookup::<String, i32>(String::from("key")) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+           
+    }
+    #[test]
+    fn invalid_path_insert() {
+        let owned_string = "./invalidfolder".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        match  kv_store.insert(String::from("key"), 2 as i32) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+           
+    }
+
+    #[test]
+    fn inserting_already_existing_key() {
+        let owned_string = ".".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
+        kv_store.insert(String::from("Hello World"), 2 as i32).unwrap();
+        match  kv_store.insert(String::from("Hello World"), 2 as i32) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }  
+    }
+
+
+    #[test]
     fn insert_string() {
-        let owned_string = "./".to_string();
+        let owned_string = ".".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -189,14 +342,14 @@ use std::collections::HashMap;
         ).unwrap();
         // use lookup function eventually to see if it is correct instead of reading from file?
         let value = fs::read_to_string("src/foo_value.txt")
-        .expect("Something went wrong reading the file");
+        .expect("Something went wrong reading the value file!");
 
         let deserialized_value:String = serde_json::from_str(&value).unwrap();
 
         assert_eq!(deserialized_value , "My favorite book.".to_string());
         // key
         let key = fs::read_to_string("src/foo_key.txt")
-        .expect("Something went wrong reading the file");
+        .expect("Something went wrong reading the key file!");
 
         let deserialized_key:String = serde_json::from_str(&key).unwrap();
 
@@ -213,7 +366,7 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_i32() {
-        let owned_string = "./".to_string();
+        let owned_string = "data".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
             process::exit(1);
@@ -378,6 +531,7 @@ use std::collections::HashMap;
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
         }
+
 
     }
 }
