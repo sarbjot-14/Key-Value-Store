@@ -7,6 +7,8 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
+use walkdir::WalkDir;
+
 
 #[derive(Debug)]
 /// A struct that represents a key-value store.
@@ -76,7 +78,6 @@ pub trait Operations {
         K: serde::Serialize + Default + Debug,
         V: serde::de::DeserializeOwned + Default + Debug;
 
-
     /// A function that removes a previously-inserted key-value mapping.
     ///
     /// If there **is** a key-value mapping stored already with the same key, it should return
@@ -101,8 +102,29 @@ pub trait Operations {
 impl Operations for KVStore {
 
     fn new(path: &str) -> std::io::Result<KVStore> {
+
+        let curr_path = &path;
+        let sub_dir_path = Path::new(&path);
+        match fs::create_dir_all(&sub_dir_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            _ => (),
+        };
+
+        let mut count = 0;
+        for entry in WalkDir::new(curr_path)
+            .follow_links(true)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+                let file_name = entry.file_name().to_string_lossy();
+                if file_name.ends_with(".key"){
+                    println!("{}", file_name);
+                    count = count + 1;
+                }
+        }
+        println!("Key file count: {}", count);
         Ok(KVStore {
-            size: 0,
+            size: count,
             path: String::from(path),
         })
     }
@@ -118,11 +140,10 @@ impl Operations for KVStore {
     {
         let mut hasher = Sha256::new();
 
-        //println!("{:?}, {:?}", key, value);
-        let serialized_value = serde_json::to_string(&value).unwrap(); //might cause error
+        let serialized_value = serde_json::to_string(&value).unwrap();
         let serialized_key = serde_json::to_string(&key).unwrap();
 
-        hasher.input_str(&serialized_key); // might cause error here
+        hasher.input_str(&serialized_key);
         let sha_key = hasher.result_str();
 
         let sha_key_slice = &sha_key[0..10];
@@ -131,26 +152,36 @@ impl Operations for KVStore {
         let key_format = ".key";
         let value_format = ".value";
 
-        let sub_dir_path = format!("{}/{}", curr_path, sha_key_slice);
-        fs::create_dir_all(&sub_dir_path).expect("Something went wrong creating the sub directory!");
-        let key_file = format!("{}/{}{}", sub_dir_path, sha_key, key_format);
-        let value_file = format!("{}/{}{}", sub_dir_path, sha_key, value_format);
+        let sub_dir_str = format!("{}/{}", curr_path, sha_key_slice);
+        let sub_dir_path = Path::new(&sub_dir_str);
+
+        match fs::create_dir_all(&sub_dir_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            _ => (),
+        };
+
+        let key_file = format!("{}/{}{}", sub_dir_str, sha_key, key_format);
+        let value_file = format!("{}/{}{}", sub_dir_str, sha_key, value_format);
         let key_file_path = Path::new(&key_file);
         let value_file_path = Path::new(&value_file);
 
-
         if key_file_path.is_file() {
-            Error::new(ErrorKind::Other, "Key file already exists!");
+            return Err(Error::new(ErrorKind::Other, "Key file already exists!"));
         }
         if value_file_path.is_file() {
-            Error::new(ErrorKind::Other, "Value file already exists!");
+            return Err(Error::new(ErrorKind::Other, "Value file already exists!"));
         }
 
-
-        fs::write(key_file, serialized_key).expect("Something went wrong writing to the key file!");
-        fs::write(value_file, serialized_value).expect("Something went wronng writing to the value file!");
+        match fs::write(key_file_path, serialized_key) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong writing to the key file!")),
+            _ => (),
+        };
+        match fs::write(value_file_path, serialized_value) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wronng writing to the value file!")),
+            _ => (),
+        };
         self.size = self.size + 1;
-        
+
         Ok(())
     }
 
@@ -172,19 +203,19 @@ impl Operations for KVStore {
         let value_format = ".value";
 
         let sub_dir = format!("{}/{}", curr_path, sha_key_slice);
-        fs::create_dir_all(&sub_dir).expect("Something went wrong creating the sub directory!");
 
         let value_file = format!("{}/{}{}", sub_dir, sha_key, value_format);
         let value_file_path = Path::new(&value_file);
 
         if !(value_file_path.is_file()) {
-            Error::new(ErrorKind::Other, "Value file does not exist!");
+            return Err(Error::new(ErrorKind::Other, "Value file does not exist!"));
         }
-        
-        let value = fs::read_to_string(value_file)
-        .expect("Something went wrong reading the value file!");
 
-        println!("it is {}", value);
+        let value;
+        match fs::read_to_string(value_file_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            _ => value = fs::read_to_string(value_file_path)?,
+        };
 
         Ok(serde_json::from_str(&value).unwrap())
     }
@@ -214,29 +245,42 @@ impl Operations for KVStore {
         let value_file_path = Path::new(&value_file);
 
         if !(sub_dir_path.is_dir()) {
-            Error::new(ErrorKind::Other, "Sub directory does not exist!");
+            return Err(Error::new(ErrorKind::Other, "Sub directory does not exist!"));
         }
         if !(key_file_path.is_file()) {
-            Error::new(ErrorKind::Other, "Key file does not exist!");
+            return Err(Error::new(ErrorKind::Other, "Key file does not exist!"));
         }
         if !(value_file_path.is_file()) {
-            Error::new(ErrorKind::Other, "Value file does not exist!");
+            return Err(Error::new(ErrorKind::Other, "Value file does not exist!"));
         }
 
-        let value = fs::read_to_string(value_file_path)
-        .expect("Something went wrong reading the value file!");
+        let value;
+        match fs::read_to_string(value_file_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            _ => value = fs::read_to_string(value_file_path)?,
+        };
 
-        fs::remove_file(&key_file).expect("Something went wrong removing the key file!");
-        fs::remove_file(&value_file).expect("Something went wrong removing the value file!");
+        match fs::remove_file(key_file_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the key file!")),
+            _ => (),
+        };
+        match fs::remove_file(value_file_path) {
+            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the value file!")),
+            _ => (),
+        };
         self.size = self.size - 1;
 
         if sub_dir_path.read_dir()?.next().is_none() {
-            fs::remove_dir_all(&sub_dir_path).expect("Something went wrong removing the sub directory!");
+            match fs::remove_dir_all(&sub_dir_path) {
+                Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the sub directory!")),
+                _ => (),
+            };
         }
 
         Ok(serde_json::from_str(&value).unwrap())
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -247,45 +291,36 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+    
     #[test]
-    fn insert_i32_1() {
-        let owned_string = ".".to_string(); 
+    fn insert_with_empty_path() {
+        let owned_string = "".to_string(); 
+        match KVStore::new(&owned_string) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+    }
+
+    #[test]
+    fn check_insert_size_update() {
+        let owned_string = "data1".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             eprintln!("Problem : {}", err);
             process::exit(1);
         });
-        kv_store.insert(String::from("Test String 1 - Key"), 1 as i32).unwrap();
-        kv_store.insert(String::from("Test String 2 - Key"), 2 as i32).unwrap();
-        kv_store.insert(String::from("Test String 3 - Key"), 3 as i32).unwrap();
-        println!("size : {}", kv_store.size());
+        kv_store.insert(String::from("Pizza"), 21 as i32).unwrap();
+        assert_eq!( kv_store.size(), 1);
+        kv_store.insert(String::from("Coffee"), 33 as i32).unwrap();
+        assert_eq!( kv_store.size(), 2);
+        kv_store.insert(String::from("Candy"), 54 as i32).unwrap();
         assert_eq!( kv_store.size(), 3);
-        //kv_store.insert(String::from("Test String 1 - Key"), 2 as i32).unwrap();
-        //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
     }
-
-    #[test]
-    fn insert_i32_101() {
-        let owned_string = ".".to_string(); 
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
-            process::exit(1);
-        });
-
-        println!("size : {}", kv_store.size());
-        //assert_eq!( kv_store.size(), 0);
-        assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 1 as i32);
-        assert_eq!( kv_store.size(), 0);
-        //kv_store.insert(String::from("Test String 1 - Key"), 2 as i32).unwrap();
-        //assert_eq!( kv_store.lookup::<String, i32>(String::from("Test String 1 - Key")).unwrap(), 2 as i32);
-    }
-
-  
 
     #[test]
     fn inserting_already_existing_key() {
-        let owned_string = ".".to_string(); 
+        let owned_string = "data2".to_string(); 
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+            eprintln!("Problem : {}", err);
             process::exit(1);
         });
 
@@ -293,48 +328,101 @@ use std::collections::HashMap;
         match  kv_store.insert(String::from("Hello World"), 2 as i32) {
             Ok(_) => assert_eq!(false, false),
             Err(e) => assert_eq!(true, true),
-        }  
-    }
-
-
-    #[test]
-    fn insert_string() {
-        let owned_string = ".".to_string(); 
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
-            process::exit(1);
-        });
-
-
-        // Review some books.
-        kv_store.insert(
-            "Adventures of Huckleberry Finn".to_string(),
-            "My favorite book.".to_string(),
-        ).unwrap();
-        // use lookup function eventually to see if it is correct instead of reading from file?
-        let value = fs::read_to_string("src/foo_value.txt")
-        .expect("Something went wrong reading the value file!");
-
-        let deserialized_value:String = serde_json::from_str(&value).unwrap();
-
-        assert_eq!(deserialized_value , "My favorite book.".to_string());
-        // key
-        let key = fs::read_to_string("src/foo_key.txt")
-        .expect("Something went wrong reading the key file!");
-
-        let deserialized_key:String = serde_json::from_str(&key).unwrap();
-
-        assert_eq!(deserialized_key , "Adventures of Huckleberry Finn".to_string());
-    }
-
-    fn print_type_of<T>(_: &T) {
-
-        if std::any::type_name::<T>() == "i32"{
-            //println!("it is {}", std::any::type_name::<T>());
-
         }
     }
 
+    #[test]
+    fn lookup_existing_key() {
+        let owned_string = "data3".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Future"), 90 as i32).unwrap();
+        assert_eq!( kv_store.lookup::<String, i32>(String::from("Future")).unwrap(), 90 as i32);
+    }
+
+    #[test]
+    fn lookup_non_existing_key() {
+        let owned_string = "data4".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Past"), 20 as i32).unwrap();
+        match  kv_store.lookup::<String, i32>(String::from("Present")) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+    }
+
+    #[test]
+    fn lookup_empty_key() {
+        let owned_string = "data5".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Past"), 20 as i32).unwrap();
+        match  kv_store.lookup::<String, i32>(String::from("")) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+    }
+
+    #[test]
+    fn remove_existing_key() {
+        let owned_string = "data6".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Cold"), 86 as i32).unwrap();
+        kv_store.insert(String::from("Water"), 90 as i32).unwrap();
+        assert_eq!( kv_store.remove::<String, i32>(String::from("Water")).unwrap(), 90 as i32);
+    }
+
+    #[test]
+    fn remove_non_existing_key() {
+        let owned_string = "data7".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Infinite"), 20 as i32).unwrap();
+        kv_store.insert(String::from("Time"), 20 as i32).unwrap();
+        match  kv_store.remove::<String, i32>(String::from("This key does not exist")) {
+            Ok(_) => assert_eq!(false, false),
+            Err(e) => assert_eq!(true, true),
+        }
+    }
+
+    #[test]
+    fn check_size_when_remove_existing_key() {
+        let owned_string = "data8".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Sine"), 360 as i32).unwrap();
+        assert_eq!( kv_store.size(), 1);
+        kv_store.insert(String::from("Wave"), 180 as i32).unwrap();
+        assert_eq!( kv_store.size(), 2);
+        assert_eq!( kv_store.remove::<String, i32>(String::from("Sine")).unwrap(), 360 as i32);
+        assert_eq!( kv_store.size(), 1);
+    }
+
+    #[test]
+    fn remove_existing_key2() {
+        let owned_string = "data9".to_string(); 
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+        kv_store.insert(String::from("Earth"), 77 as i32).unwrap();
+        assert_eq!( kv_store.remove::<String, i32>(String::from("Earth")).unwrap(), 77 as i32);
+    }
+    
     #[test]
     fn insert_i32() {
         let owned_string = "data".to_string(); 
