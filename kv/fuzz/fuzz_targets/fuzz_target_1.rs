@@ -5,13 +5,26 @@ use std::process;
 use kv::KVStore;
 use kv::Operations;
 
-fuzz_target!(|data: &[u8]| {
-    // fuzzed code goes here
-    let owned_string = "./".to_string(); 
-    let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-        //eprintln!("Problem : {}", err);
-        process::exit(1);
-    });
+use libfuzzer_sys::arbitrary::{Arbitrary, Result, Unstructured};
 
-    kv_store.insert(String::from("key"), 2 as i32).unwrap();
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+pub struct Rgb {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+impl<'a> Arbitrary<'a> for Rgb {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let r = u8::arbitrary(u)?;
+        let g = u8::arbitrary(u)?;
+        let b = u8::arbitrary(u)?;
+        Ok(Rgb { r, g, b })
+    }
+}
+
+// The fuzz target takes a well-formed `Rgb` as input!
+libfuzzer_sys::fuzz_target!(|rgb: Rgb| {
+    println!("{}", rgb.r);
 });
