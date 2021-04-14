@@ -508,7 +508,7 @@ use std::collections::HashMap;
 */
 
     #[test]
-    fn insert_bool() {
+    fn insert_bool_true() {
         let owned_string = "./test2".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
             //eprintln!("Problem : {}", err);
@@ -520,6 +520,16 @@ use std::collections::HashMap;
 
         assert_eq!( kv_store.lookup::<String, bool>(String::from("key")).unwrap(), true);
 
+    }
+
+    #[test]
+    fn insert_bool_false() {
+        let owned_string = "./test3".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
+            //eprintln!("Problem : {}", err);
+            process::exit(1);
+        });
+
         let f_bool:bool = false;
         kv_store.insert(String::from("key"), f_bool as bool).unwrap();
 
@@ -529,7 +539,7 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_array() {
-        let owned_string = "./test3".to_string();
+        let owned_string = "./test4".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
             process::exit(1)
         });
@@ -544,7 +554,7 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_hashmap() {
-        let owned_string = "./test4".to_string();
+        let owned_string = "./test5".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
             process::exit(1)
         });
