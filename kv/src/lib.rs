@@ -289,27 +289,12 @@ use super::KVStore;
 use super::Operations;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 
-    struct Noisy;
-
-    impl Drop for Noisy {
-        fn drop(&mut self) {
-            //println!("I'm melting! Meeeelllllttttinnnng!");
-            // Drop the folder test-KV for the next test run
-            let owned_string = "./test-KV".to_string();
-            match fs::remove_dir_all(&owned_string) {
-                Err(_e) =>(),
-                _ => (),
-            };
-        }
-        
-    }
 
 
     #[test]
     fn insert_with_empty_path() {
-        let _my_setup = Noisy;
+        
         let owned_string = "".to_string();
         match KVStore::new(&owned_string) {
             Ok(_) => assert_eq!(false, false),
@@ -319,7 +304,7 @@ use std::fs;
 
     #[test]
     fn check_insert_size_update() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data1".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -335,7 +320,7 @@ use std::fs;
 
     #[test]
     fn inserting_already_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data2".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -351,7 +336,7 @@ use std::fs;
 
     #[test]
     fn lookup_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data3".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -363,7 +348,7 @@ use std::fs;
 
     #[test]
     fn lookup_non_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data4".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -378,7 +363,7 @@ use std::fs;
 
     #[test]
     fn lookup_empty_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data5".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -393,7 +378,7 @@ use std::fs;
 
     #[test]
     fn remove_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data6".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -406,7 +391,7 @@ use std::fs;
 
     #[test]
     fn remove_non_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data7".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -422,7 +407,7 @@ use std::fs;
 
     #[test]
     fn check_size_when_remove_existing_key() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data8".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -438,7 +423,7 @@ use std::fs;
 
     #[test]
     fn remove_existing_key2() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data9".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -450,7 +435,7 @@ use std::fs;
 
     #[test]
     fn insert_i32() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/data".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -472,7 +457,7 @@ use std::fs;
 
         #[test]
         fn insert_obj() {
-            let _my_setup = Noisy;
+            
 
             let address = Address {
                 street: "10 Downing Street".to_owned(),
@@ -536,7 +521,7 @@ use std::fs;
 
     #[test]
     fn insert_bool_true() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/test2".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -552,7 +537,7 @@ use std::fs;
 
     #[test]
     fn insert_bool_false() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/test3".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -568,7 +553,7 @@ use std::fs;
 
     #[test]
     fn insert_array() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/test4".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|_err| {
             process::exit(1)
@@ -584,7 +569,7 @@ use std::fs;
 
     #[test]
     fn insert_hashmap() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/test5".to_string();
         let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|_err| {
             process::exit(1)
@@ -606,7 +591,7 @@ use std::fs;
 
     #[test]
     fn invalid_path_lookup() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/invalidfolder2".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
@@ -623,7 +608,7 @@ use std::fs;
     }
     #[test]
     fn invalid_path_insert() {
-        let _my_setup = Noisy;
+        
         let owned_string = "./test-KV/invalidfolder".to_string();
         let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
             
