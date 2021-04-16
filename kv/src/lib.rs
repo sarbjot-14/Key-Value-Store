@@ -106,7 +106,7 @@ impl Operations for KVStore {
         let curr_path = &path;
         let sub_dir_path = Path::new(&path);
         match fs::create_dir_all(&sub_dir_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
             _ => (),
         };
 
@@ -156,7 +156,7 @@ impl Operations for KVStore {
         let sub_dir_path = Path::new(&sub_dir_str);
 
         match fs::create_dir_all(&sub_dir_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
             _ => (),
         };
 
@@ -173,11 +173,11 @@ impl Operations for KVStore {
         }
 
         match fs::write(key_file_path, serialized_key) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong writing to the key file!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong writing to the key file!")),
             _ => (),
         };
         match fs::write(value_file_path, serialized_value) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wronng writing to the value file!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wronng writing to the value file!")),
             _ => (),
         };
         self.size = self.size + 1;
@@ -213,7 +213,7 @@ impl Operations for KVStore {
 
         let value;
         match fs::read_to_string(value_file_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
             _ => value = fs::read_to_string(value_file_path)?,
         };
 
@@ -256,23 +256,23 @@ impl Operations for KVStore {
 
         let value;
         match fs::read_to_string(value_file_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong creating the sub directory!")),
             _ => value = fs::read_to_string(value_file_path)?,
         };
 
         match fs::remove_file(key_file_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the key file!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the key file!")),
             _ => (),
         };
         match fs::remove_file(value_file_path) {
-            Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the value file!")),
+            Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the value file!")),
             _ => (),
         };
         self.size = self.size - 1;
 
         if sub_dir_path.read_dir()?.next().is_none() {
             match fs::remove_dir_all(&sub_dir_path) {
-                Err(e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the sub directory!")),
+                Err(_e) => return Err(Error::new(ErrorKind::Other, "Something went wrong removing the sub directory!")),
                 _ => (),
             };
         }
@@ -287,25 +287,42 @@ mod tests {
 use std::process;
 use super::KVStore;
 use super::Operations;
-use std::fs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
+
+    struct Noisy;
+
+    impl Drop for Noisy {
+        fn drop(&mut self) {
+            //println!("I'm melting! Meeeelllllttttinnnng!");
+            // Drop the folder test-KV for the next test run
+            let owned_string = "./test-KV".to_string();
+            match fs::remove_dir_all(&owned_string) {
+                Err(_e) =>(),
+                _ => (),
+            };
+        }
+        
+    }
 
 
     #[test]
     fn insert_with_empty_path() {
+        let _my_setup = Noisy;
         let owned_string = "".to_string();
         match KVStore::new(&owned_string) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
     }
 
     #[test]
     fn check_insert_size_update() {
-        let owned_string = "data1".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data1".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Pizza"), 21 as i32).unwrap();
@@ -318,24 +335,26 @@ use std::collections::HashMap;
 
     #[test]
     fn inserting_already_existing_key() {
-        let owned_string = "data2".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data2".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
         kv_store.insert(String::from("Hello World"), 2 as i32).unwrap();
         match  kv_store.insert(String::from("Hello World"), 2 as i32) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
     }
 
     #[test]
     fn lookup_existing_key() {
-        let owned_string = "data3".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data3".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Future"), 90 as i32).unwrap();
@@ -344,37 +363,40 @@ use std::collections::HashMap;
 
     #[test]
     fn lookup_non_existing_key() {
-        let owned_string = "data4".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data4".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Past"), 20 as i32).unwrap();
         match  kv_store.lookup::<String, i32>(String::from("Present")) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
     }
 
     #[test]
     fn lookup_empty_key() {
-        let owned_string = "data5".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data5".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Past"), 20 as i32).unwrap();
         match  kv_store.lookup::<String, i32>(String::from("")) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
     }
 
     #[test]
     fn remove_existing_key() {
-        let owned_string = "data6".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data6".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Cold"), 86 as i32).unwrap();
@@ -384,24 +406,26 @@ use std::collections::HashMap;
 
     #[test]
     fn remove_non_existing_key() {
-        let owned_string = "data7".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data7".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Infinite"), 20 as i32).unwrap();
         kv_store.insert(String::from("Time"), 20 as i32).unwrap();
         match  kv_store.remove::<String, i32>(String::from("This key does not exist")) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
     }
 
     #[test]
     fn check_size_when_remove_existing_key() {
-        let owned_string = "data8".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data8".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Sine"), 360 as i32).unwrap();
@@ -414,9 +438,10 @@ use std::collections::HashMap;
 
     #[test]
     fn remove_existing_key2() {
-        let owned_string = "data9".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data9".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
         kv_store.insert(String::from("Earth"), 77 as i32).unwrap();
@@ -425,9 +450,10 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_i32() {
-        let owned_string = "data".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/data".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
@@ -446,6 +472,7 @@ use std::collections::HashMap;
 
         #[test]
         fn insert_obj() {
+            let _my_setup = Noisy;
 
             let address = Address {
                 street: "10 Downing Street".to_owned(),
@@ -456,9 +483,9 @@ use std::collections::HashMap;
             //let j = serde_json::to_string(&address).unwrap();
 
 
-            let owned_string = "./test1".to_string();
-            let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-                //eprintln!("Problem : {}", err);
+            let owned_string = "./test-KV/test1".to_string();
+            let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+                
                 process::exit(1);
             });
 
@@ -476,8 +503,8 @@ use std::collections::HashMap;
     #[test]
     fn insert_object() {
         let owned_string = "./".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
@@ -509,9 +536,10 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_bool_true() {
-        let owned_string = "./test2".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/test2".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
@@ -524,9 +552,10 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_bool_false() {
-        let owned_string = "./test3".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/test3".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
@@ -539,23 +568,25 @@ use std::collections::HashMap;
 
     #[test]
     fn insert_array() {
-        let owned_string = "./test4".to_string();
-        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/test4".to_string();
+        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|_err| {
             process::exit(1)
         });
 
-        let v: Vec<i32> = Vec::new();
-        let v = vec![1, 2, 3];
+        let _v: Vec<i32> = Vec::new();
+        let _v = vec![1, 2, 3];
 
-        kv_store.insert(String::from("key"), v as Vec<i32>).unwrap();
+        kv_store.insert(String::from("key"), _v as Vec<i32>).unwrap();
 
         assert_eq!(kv_store.lookup::<String, Vec<i32>>(String::from("key")).unwrap(), [1, 2, 3]);
     }
 
     #[test]
     fn insert_hashmap() {
-        let owned_string = "./test5".to_string();
-        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|err| {
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/test5".to_string();
+        let mut kv_store = KVStore::new(&owned_string).unwrap_or_else(|_err| {
             process::exit(1)
         });
 
@@ -575,9 +606,10 @@ use std::collections::HashMap;
 
     #[test]
     fn invalid_path_lookup() {
-        let owned_string = "./invalidfolder".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/invalidfolder2".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
@@ -585,21 +617,22 @@ use std::collections::HashMap;
 
         match  kv_store.lookup::<String, i32>(String::from("key")) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
 
     }
     #[test]
     fn invalid_path_insert() {
-        let owned_string = "./invalidfolder".to_string();
-        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|err| {
-            //eprintln!("Problem : {}", err);
+        let _my_setup = Noisy;
+        let owned_string = "./test-KV/invalidfolder".to_string();
+        let mut kv_store =  KVStore::new(&owned_string).unwrap_or_else(|_err| {
+            
             process::exit(1);
         });
 
         match  kv_store.insert(String::from("key"), 3 as i32) {
             Ok(_) => assert_eq!(false, false),
-            Err(e) => assert_eq!(true, true),
+            Err(_e) => assert_eq!(true, true),
         }
 
 
